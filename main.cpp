@@ -131,15 +131,22 @@ const int tilemap[MAP_ROWS][MAP_COLS] = {
 
 
 // Player class
-struct Player {
-    sf::RectangleShape shape;
-    int health = 50;
-    int attack = 10;
-    int xp;
-    int level;
+class Player {
+private:
+
+    int heroHealth = 50;
+    int heroVitality = 10;
+    int heroStrength = 10;
+    int heroAgility = 10;
+    int xp = 0;
+    int lvl = 1;
+    int skillPoints = 5;
     std::string name = "Player";
+    int choice = 0;
 
 
+public:
+    sf::RectangleShape shape;
 
     Player(int x, int y) {
         shape.setSize(sf::Vector2f(TILE_SIZE, TILE_SIZE));
@@ -148,17 +155,85 @@ struct Player {
     }
 
     void takeDamage(int damage) {
-        health = std::max(0, health - damage);
+        heroHealth = std::max(0, heroHealth - damage);
     }
 
-    void gainXP(int amount) {
-        xp += amount;
-        if (xp >= level * 100) {
-            xp -= level * 100;
-            level++;
-            health = 100;
-            std::cout << "Leveled up! Now level " << level << "\n";
+    void giveXP(int a) {
+        xp += a;
+    }
+
+    void levelCheck()
+    {
+
+        if (xp > ((lvl * 0.5) * 100))
+        {
+            xp -= (lvl * 0.5) * 100;
+            lvl += 1;
+            skillPoints += 7;
+            system("cls");
+            std::cout << "You leveled up!\n\n";
+            displayStats();
+            std::this_thread::sleep_for(std::chrono::seconds(2));
         }
+    }
+
+    int getChoice() {
+        int x;
+        std::cin >> x;
+        return x;
+    }
+
+    void setSkills()
+    {
+
+
+        while (skillPoints > 0)
+        {
+            system("cls");
+            displayStats();
+            std::cout << "\nYou have " << skillPoints << " skill points to spend." << std::endl << "What will you spend it on?:\n1. Strength\n2. Agility\n3. Vitality\n";
+            choice = getChoice();
+            switch (choice)
+            {
+            case 1:
+                skillPoints -= 1;
+                heroStrength += 1;
+                break;
+            case 2:
+                skillPoints -= 1;
+                heroAgility += 1;
+                break;
+            case 3:
+                skillPoints -= 1;
+                heroVitality += 1;
+                break;
+            default:
+                std::cout << "Wrong Choice";
+            }
+            system("cls");
+        }
+    }
+
+    void applyStats()
+    {
+        heroHealth = 20 + (heroVitality - 10); // Player's health based on vitality
+    }
+
+
+    // Function to display the stats
+    void displayStats() {
+        std::cout << "Stats:\n";
+        std::cout << "Level: " << lvl << std::endl;
+        std::cout << "XP: " << xp << std::endl;
+        std::cout << "Strength: " << heroStrength << std::endl;
+        ///  cout << "2. Perception: " << perception << endl;
+        std::cout << "Agility: " << heroAgility << std::endl;
+        std::cout << "Vitality: " << heroVitality << std::endl;
+        std::cout << std::endl;
+    }
+
+    int getHealth() {
+        return heroHealth;
     }
 
     float getXPosition() {
@@ -216,6 +291,93 @@ struct Enemy {
 // Function to handle combat
 void handleCombat(Player& player, Enemy& enemy) {}
 
+/*Pokemon combat style old
+
+// === Combat State ===
+if (currentState == GameState::Combat) {
+    window.clear(sf::Color::Black);
+
+    // Position player and enemy for battle
+    player.shape.setPosition(200.f, 400.f);
+    activeEnemy->shape.setPosition(800.f, 200.f);
+    window.draw(player.shape);
+    window.draw(activeEnemy->shape);
+
+    // Draw menu options
+    sf::Text fightOption("1. Fight", font, 24);
+    fightOption.setPosition(100, 600);
+    window.draw(fightOption);
+
+    sf::Text runOption("2. Run", font, 24);
+    runOption.setPosition(300, 600);
+    window.draw(runOption);
+
+    sf::Text hpDisplay("Player HP: " + std::to_string(player.hp) +
+        "  |  Enemy HP: " + std::to_string(activeEnemy->hp), font, 24);
+    hpDisplay.setPosition(100, 100);
+    window.draw(hpDisplay);
+
+    window.display();
+
+    // Handle combat input
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1) && playerTurn) {
+        activeEnemy->takeDamage(20);
+        playerTurn = false;
+        sf::sleep(sf::seconds(0.5f));
+    }
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) {
+        currentState = GameState::Exploration;
+        player.shape.setPosition(150.f, 150.f);
+        activeEnemy = nullptr;
+    }
+
+    if (!playerTurn && activeEnemy->hp > 0) {
+        player.hp -= 10;
+        playerTurn = true;
+        sf::sleep(sf::seconds(0.5f));
+    }
+
+    if (activeEnemy != nullptr && activeEnemy->hp <= 0) {
+        player.gainXP(50);
+        activeEnemy->shape.setPosition(-100, -100);
+        currentState = GameState::Exploration;
+        player.shape.setPosition(150.f, 150.f);
+        activeEnemy = nullptr;
+    }
+    else if (player.hp <= 0) {
+        std::cout << "You fainted!\n";
+        window.close();
+    }
+
+    continue;
+}
+
+// === Exploration State ===
+if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) player.shape.move(0.f, -5.f);
+if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) player.shape.move(0.f, 5.f);
+if (sf::Keyboard::isKeyPressed(sf::Keyboard::A)) player.shape.move(-5.f, 0.f);
+if (sf::Keyboard::isKeyPressed(sf::Keyboard::D)) player.shape.move(5.f, 0.f);
+
+// Check collision with enemies to trigger combat
+for (auto& enemy : enemies) {
+    if (player.shape.getGlobalBounds().intersects(enemy.shape.getGlobalBounds()) && enemy.hp > 0) {
+        currentState = GameState::Combat;
+        activeEnemy = &enemy;
+        break;
+    }
+}
+
+window.clear();
+window.draw(player.shape);
+for (auto& enemy : enemies) {
+    if (enemy.hp > 0)
+        window.draw(enemy.shape);
+}
+window.display();
+*/
+
+
+
 
 // Main game loop
 int main() {
@@ -232,7 +394,7 @@ int main() {
 
 
     sf::View camera(sf::FloatRect({ 0.f, 0.f }, { 1600.f, 800.f }));
-    camera.zoom(1.f); //For testing, to see the whole map
+    camera.zoom(6.f); //For testing, to see the whole map
 
 
     camera.setCenter({ player.getXPosition() + TILE_SIZE / 2 , player.getYPosition() + TILE_SIZE / 2 });
@@ -243,14 +405,14 @@ int main() {
     //rooms.emplace_back(start);
 
     std::filesystem::path cwd = std::filesystem::current_path();
-    std::filesystem::path fontFile = "C:/Users/shake/OneDrive/Desktop/Game_2_Cop3330/x64/Debug/arial.ttf";
+    std::filesystem::path fontFile = "arial.ttf";
     std::filesystem::path fullPath = cwd / fontFile;
 
 
-    std::filesystem::path wallTextureFile = "C:/Users/shake/OneDrive/Desktop/Game images/dungeonwalls.png";
+    std::filesystem::path wallTextureFile = "dungeonwalls.png";
     std::filesystem::path fullWallPath = cwd / wallTextureFile;
 
-    std::filesystem::path floorTextureFile = "C:/Users/shake/OneDrive/Desktop/Game images/dungeonfloors.png";
+    std::filesystem::path floorTextureFile = "dungeonfloors.png";
     std::filesystem::path fullFloorPath = cwd / floorTextureFile;
 
     sf::Texture wallTexture(fullWallPath);
@@ -301,12 +463,19 @@ int main() {
         }
 
 
-        std::vector<Enemy> enemies = { Enemy(80.f, 50.f), Enemy(500.f, 500.f) };
+        std::vector<Enemy> enemies = { Enemy(80.f, 50.f), Enemy(50.f, 47.f), Enemy(80.f, 20.f), Enemy(36.f, 68.f), Enemy(87.f, 14.f) , Enemy(20.f, 58.f) , Enemy(39.f, 40.f) , Enemy(68.f, 82.f) , Enemy(13.f, 50.f) , Enemy(20.f, 20.f) , Enemy(13.f, 82.f) , Enemy(21.f, 41.f) , Enemy(20.f, 36.f) };
         Enemy* activeEnemy = nullptr;
         GameState currentState = GameState::Exploration;
         bool playerTurn = true;
 
         while (window.isOpen()) {
+
+            player.levelCheck();
+            player.applyStats();
+            player.setSkills();
+
+
+
             while (currentState == GameState::Combat) {
                 //std::cout << "Hello";
                 //camera.setCenter({ 100.f, 40.f});
@@ -326,6 +495,8 @@ int main() {
                     }
                 }
                 */
+
+                int currentHealth = player.getHealth();
 
                 player.shape.setPosition({ 200.f, 400.f });
                 activeEnemy->shape.setPosition({ 800.f, 200.f });
@@ -366,7 +537,7 @@ int main() {
 
                 // Display player and enemy HP
                 sf::Text hpDisplay(font);
-                hpDisplay.setString("Player HP: " + std::to_string(player.health) +
+                hpDisplay.setString("Player HP: " + std::to_string(currentHealth) +
                     "  |  Enemy HP: " + std::to_string(activeEnemy->health));
                 // set the character size
                 hpDisplay.setCharacterSize(24); // in pixels, not points!
@@ -386,6 +557,7 @@ int main() {
                 else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Num2)) {
                     currentState = GameState::Exploration;
                     player.shape.setPosition({ 150.f, 150.f });
+                    activeEnemy->getBack();
                     activeEnemy = nullptr;
                 }
                 else if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left) && playerTurn) {
@@ -407,19 +579,19 @@ int main() {
                 // Enemy's turn
                 if (!playerTurn && activeEnemy->health > 0) {
                     sf::sleep(sf::seconds(0.5f));
-                    player.health -= 10;
+                    currentHealth -= 10;
                     playerTurn = true;
                 }
 
                 // Victory / defeat check
                 if (activeEnemy != nullptr && activeEnemy->health <= 0) {
-                    player.gainXP(50);
+                    player.giveXP(50);
                     activeEnemy->shape.setPosition({ -100, -100 });
                     currentState = GameState::Exploration;
                     player.shape.setPosition({ 150.f, 150.f });
                     activeEnemy = nullptr;
                 }
-                else if (player.health <= 0) {
+                else if (currentHealth <= 0) {
                     std::cout << "You fainted!\n";
                     window.close();
                 }
@@ -512,6 +684,8 @@ int main() {
                 for (int x = 0; x < MAP_COLS; ++x) {
                     sf::Sprite wall(wallTexture);
                     sf::Sprite floor(floorTexture);
+                    //sf::RectangleShape tile(sf::Vector2f(static_cast<float>(TILE_SIZE), static_cast<float>(TILE_SIZE)));
+                    //tile.setPosition(sf::Vector2f(x * TILE_SIZE, y * TILE_SIZE));
                     if (tilemap[y][x] == 0) {
                         floor.setPosition({ float(x * TILE_SIZE), float(y * TILE_SIZE) });
                         sf::Vector2u size = floorTexture.getSize();
@@ -528,13 +702,18 @@ int main() {
                     //window.draw(floor);
                 }
             }
-
-            Enemy enemy(100.f, 100.f);
+            //for (auto& r : rooms) {
+            //    r.draw(window);
+            //}
+            //for (auto& c : corridors) {
+            //    c.draw(window);
+            //}
+            //Enemy enemy(100.f, 100.f);
 
             //window.draw(enemy.shape);
-            window.draw(enemies[0].shape);
-            //std::cout << enemies[0].getXPosition() << " " << enemies[0].getYPosition();
-            window.draw(enemies[1].shape);
+            for (auto& e : enemies) {
+                window.draw(e.shape);
+            }
             window.draw(player.shape);
             window.draw(text);
 
